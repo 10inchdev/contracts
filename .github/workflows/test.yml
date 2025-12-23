@@ -1,0 +1,38 @@
+name: Smart Contract Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  test:
+    name: Run Contract Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Compile contracts
+        run: npx hardhat compile
+
+      - name: Run tests
+        run: npx hardhat test
+        env:
+          REPORT_GAS: true
+
+      - name: Run coverage
+        run: npx hardhat coverage || echo "Coverage skipped"
+        continue-on-error: true

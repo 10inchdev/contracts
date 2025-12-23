@@ -1,0 +1,19 @@
+{
+  "name": "asterpad-contracts",
+  "version": "1.0.0",
+  "description": "AsterPad Smart Contracts - BSC Token Launchpad with Snowball/Fireball auto-buyback mechanics",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "ethers": "^6.13.0",
+    "hardhat": "^2.22.0",
+    "chai": "^4.5.0"
+  },
+  "keywords": ["solidity", "bsc", "launchpad", "defi", "smart-contracts"],
+  "license": "MIT"
+}
