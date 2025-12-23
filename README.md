@@ -57,7 +57,7 @@ After tokens graduate from the bonding curve to PancakeSwap, trades go through t
 |----------|---------|----------|
 | TokenFactory (Main) | [`0x0fff767cad811554994f3b9e6317730ff25720e3`](https://bscscan.com/address/0x0fff767cad811554994f3b9e6317730ff25720e3) | ✅ |
 | SnowballFactoryV2 | [`0x9DF2285dB7c3dd16DC54e97607342B24f3037Cc5`](https://bscscan.com/address/0x9DF2285dB7c3dd16DC54e97607342B24f3037Cc5) | ✅ |
-| AsterPadRouter | `TBD` | 🔜 |
+| AsterPadRouter | [`0x20302F780d8b3b0fC96d8cB56C528F29ae8F7a28`](https://bscscan.com/address/0x20302F780d8b3b0fC96d8cB56C528F29ae8F7a28) | ✅ |
 
 ## Running Tests
 
