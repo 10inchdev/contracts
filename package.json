@@ -5,11 +5,15 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "test:v2": "hardhat test test/TokenFactoryV2.test.ts",
+    "test:v3": "hardhat test test/SnowballFactoryV3.test.ts",
+    "test:legacy": "hardhat test test/AsterPadRouter.test.ts test/SnowballFactoryV2.test.ts",
     "coverage": "hardhat coverage"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.0.0",
     "ethers": "^6.13.0",
     "hardhat": "^2.22.0",
     "chai": "^4.5.0"
