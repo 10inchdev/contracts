@@ -8,15 +8,34 @@ BSC Token Launchpad with Snowball/Fireball auto-buyback mechanics and perpetual 
 
 | Contract | Description |
 |----------|-------------|
-| **AsterPadRouterFlattened.sol** | 🆕 Perpetual fee router for post-graduation trading |
-| **AsterPadV2Optimized.sol** | Main factory contract (deployed on BSC Mainnet) |
-| **TokenFactory.sol** | Token creation factory |
-| **SnowballFactoryV2Flattened.sol** | Snowball/Fireball wrapper V2 (per-pool fair distribution) |
+| **TokenFactoryV2Optimized.sol** | 🆕 UUPS Upgradeable factory with creator auto-exempt fix |
+| **SnowballFactoryV3Flattened.sol** | 🆕 UUPS Upgradeable Snowball/Fireball wrapper V3 |
+| **AsterPadRouterFlattened.sol** | Perpetual fee router for post-graduation trading |
+| **AsterPadV2Optimized.sol** | Main factory contract (Standard mode) |
+| **SnowballFactoryV2Flattened.sol** | Snowball/Fireball wrapper V2 (deprecated) |
 | **SnowballFactoryFlattened.sol** | Snowball/Fireball wrapper V1 (deprecated) |
 
 ## Features
 
-### 🆕 AsterPadRouter - Perpetual Creator Fees
+### 🆕 V3 Upgradeable Contracts (December 2024)
+
+Both `TokenFactoryV2` and `SnowballFactoryV3` use the **UUPS Proxy Pattern** for upgradeability:
+
+- **Future-proof**: Can fix bugs and add features without redeploying
+- **Same address forever**: Users always interact with the proxy address
+- **Admin controlled**: Only owner can authorize upgrades
+
+#### TokenFactoryV2 Improvements
+- **Creator Auto-Exempt**: Tokens automatically exempt their creator from trading restrictions
+- **Fixes Snowball Bug**: SnowballFactory can now transfer tokens to DEAD address for burning
+- **Optimized Size**: Under 24KB deployment limit
+
+#### SnowballFactoryV3 Improvements
+- **Configurable Threshold**: `minBuybackThreshold` adjustable by admin (0.001 - 1 BNB)
+- **Per-Pool Tracking**: Fair distribution of buybacks per token
+- **UUPS Upgradeable**: Can be upgraded for future improvements
+
+### AsterPadRouter - Perpetual Creator Fees
 
 After tokens graduate from the bonding curve to PancakeSwap, trades go through the AsterPadRouter to maintain fee collection:
 
@@ -33,25 +52,29 @@ After tokens graduate from the bonding curve to PancakeSwap, trades go through t
 
 ### Snowball/Fireball Launch Modes
 
-- **Snowball 🎿** - Creator's 0.5% fee goes to auto-buyback + burn
+- **Snowball ❄️** - Creator's 0.5% fee goes to auto-buyback + burn
 - **Fireball 🔥** - Same as Snowball (different branding)
 
 ### How It Works
 
-1. Creator launches token with Snowball/Fireball mode
-2. Trading fees (0.5% creator fee) accumulate in the router contract **per token**
-3. When threshold is met (0.001 BNB default), fees are used to buy back tokens
+1. Creator launches token with Snowball/Fireball mode via `SnowballFactoryV3`
+2. Trading fees (0.5% creator fee) accumulate in the contract **per token**
+3. When threshold is met (0.01 BNB default), fees are used to buy back tokens
 4. Bought tokens are burned (sent to 0x...dEaD)
 5. Result: Deflationary pressure, increasing token value
 
-### V2 Improvements
-
-- **Fair Per-Pool Distribution**: Each token's creator fees only buy back THAT token
-- **Batch Processing**: `batchExecuteBuyback()` for efficient cron processing
-- **Configurable Thresholds**: `minBuybackThreshold`
-- **Token Query**: `getTokensWithPendingBuybacks()` for automation
-
 ## Deployed Contracts (BSC Mainnet)
+
+### V3 Contracts (Current - UUPS Upgradeable)
+
+| Contract | Type | Address | Verified |
+|----------|------|---------|----------|
+| TokenFactoryV2 | Proxy | [`0xd2889580D9C8508696c9Ce82149E8867632E6C76`](https://bscscan.com/address/0xd2889580D9C8508696c9Ce82149E8867632E6C76) | ✅ |
+| TokenFactoryV2 | Implementation | [`0x07C6a591C4bDF892a9d7F1d03A418a9c321B0482`](https://bscscan.com/address/0x07C6a591C4bDF892a9d7F1d03A418a9c321B0482) | ✅ |
+| SnowballFactoryV3 | Proxy | [`0x06587986799224a88b8336f6ae0bb1d84ba6c026`](https://bscscan.com/address/0x06587986799224a88b8336f6ae0bb1d84ba6c026) | ✅ |
+| SnowballFactoryV3 | Implementation | [`0x60259109578d148210f155f6ca907435ee750115`](https://bscscan.com/address/0x60259109578d148210f155f6ca907435ee750115) | ✅ |
+
+### V1/V2 Contracts (Legacy)
 
 | Contract | Address | Verified |
 |----------|---------|----------|
@@ -108,6 +131,19 @@ All contracts use OpenZeppelin security patterns:
 - `Pausable` - Emergency pause functionality
 - `Ownable2Step` - Two-step ownership transfer (prevents accidental transfers)
 - `SafeERC20` - Safe token transfers
+- `UUPSUpgradeable` - Secure upgrade mechanism (V3 contracts)
+
+## Admin Functions (V3)
+
+**Owner:** `0x3717E1A8E2788Ac53D2D5084Dc6FF93d03369D27`
+
+| Function | Description |
+|----------|-------------|
+| `setMinBuybackThreshold(uint256)` | Adjust buyback threshold (0.001 - 1 BNB) |
+| `setTokenFactory(address)` | Update TokenFactory address |
+| `pause()` / `unpause()` | Emergency pause |
+| `emergencyWithdraw(address)` | Withdraw BNB (when paused) |
+| `upgradeTo(address)` | Upgrade to new implementation |
 
 ## License
 
