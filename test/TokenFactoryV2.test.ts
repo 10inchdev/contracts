@@ -36,11 +36,16 @@ describe("TokenFactoryV2", function () {
     [owner, feeRecipient, creator, buyer, user, pendingOwner] = await ethers.getSigners();
 
     // Deploy TokenFactoryV2 as UUPS proxy
+    // Note: unsafeAllow needed because our flattened contract has UUPS-safe patterns
+    // that the plugin incorrectly flags (constructor with _disableInitializers, __self immutable)
     const TokenFactoryV2 = await ethers.getContractFactory("contracts/TokenFactoryV2Optimized.sol:TokenFactoryV2");
     tokenFactory = await upgrades.deployProxy(
       TokenFactoryV2,
       [owner.address, feeRecipient.address],
-      { kind: 'uups' }
+      { 
+        kind: 'uups',
+        unsafeAllow: ['constructor', 'state-variable-immutable']
+      }
     );
     await tokenFactory.waitForDeployment();
   });

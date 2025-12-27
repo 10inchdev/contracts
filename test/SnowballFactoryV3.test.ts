@@ -40,11 +40,16 @@ describe("SnowballFactoryV3", function () {
     [owner, feeRecipient, creator, buyer, user, pendingOwner] = await ethers.getSigners();
 
     // Deploy TokenFactoryV2 (the one that SnowballFactoryV3 uses)
+    // Note: unsafeAllow needed because our flattened contract has UUPS-safe patterns
+    // that the plugin incorrectly flags (constructor with _disableInitializers, __self immutable)
     const TokenFactoryV2 = await ethers.getContractFactory("contracts/TokenFactoryV2Optimized.sol:TokenFactoryV2");
     tokenFactory = await upgrades.deployProxy(
       TokenFactoryV2,
       [owner.address, feeRecipient.address],
-      { kind: 'uups' }
+      { 
+        kind: 'uups',
+        unsafeAllow: ['constructor', 'state-variable-immutable']
+      }
     );
     await tokenFactory.waitForDeployment();
 
@@ -53,7 +58,10 @@ describe("SnowballFactoryV3", function () {
     snowballFactory = await upgrades.deployProxy(
       SnowballFactoryV3,
       [await tokenFactory.getAddress(), owner.address],
-      { kind: 'uups' }
+      { 
+        kind: 'uups',
+        unsafeAllow: ['constructor', 'state-variable-immutable']
+      }
     );
     await snowballFactory.waitForDeployment();
   });
