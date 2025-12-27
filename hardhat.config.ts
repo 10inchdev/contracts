@@ -3,14 +3,28 @@ import "@nomicfoundation/hardhat-toolbox";
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.19",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 1
+    compilers: [
+      {
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1
+          },
+          viaIR: true
+        }
       },
-      viaIR: true
-    }
+      {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          },
+          evmVersion: "paris"
+        }
+      }
+    ]
   },
   paths: {
     sources: "./contracts",
