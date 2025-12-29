@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { 
   PredictionMarketV1,
-  ERC1967Proxy,
+  PredictionMarketProxy,
   MockTokenFactory,
   MockLaunchpadPool,
   MockChainlinkOracle,
@@ -13,7 +13,7 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("PredictionMarketV1", function () {
   let predictionMarket: PredictionMarketV1;
-  let proxy: ERC1967Proxy;
+  let proxy: PredictionMarketProxy;
   let tokenFactory: MockTokenFactory;
   let launchpadPool: MockLaunchpadPool;
   let oracle: MockChainlinkOracle;
@@ -68,8 +68,8 @@ describe("PredictionMarketV1", function () {
     ]);
     
     // Deploy proxy
-    const ERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy");
-    proxy = await ERC1967Proxy.deploy(await implementation.getAddress(), initData);
+    const PredictionMarketProxy = await ethers.getContractFactory("PredictionMarketProxy");
+    proxy = await PredictionMarketProxy.deploy(await implementation.getAddress(), initData);
     
     // Get prediction market instance at proxy address
     predictionMarket = PredictionMarketV1.attach(await proxy.getAddress()) as PredictionMarketV1;

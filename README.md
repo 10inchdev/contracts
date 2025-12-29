@@ -8,6 +8,7 @@ BSC Token Launchpad with Snowball/Fireball auto-buyback mechanics and perpetual 
 
 | Contract | Description |
 |----------|-------------|
+| **PredictionMarketV1.sol** | 🆕 UUPS Upgradeable prediction markets for token milestones |
 | **TokenFactoryV2Optimized.sol** | 🆕 UUPS Upgradeable factory with creator auto-exempt fix |
 | **SnowballFactoryV3Flattened.sol** | 🆕 UUPS Upgradeable Snowball/Fireball wrapper V3 |
 | **AsterPadRouterFlattened.sol** | Perpetual fee router for post-graduation trading |
@@ -16,6 +17,23 @@ BSC Token Launchpad with Snowball/Fireball auto-buyback mechanics and perpetual 
 | **SnowballFactoryFlattened.sol** | Snowball/Fireball wrapper V1 (deprecated) |
 
 ## Features
+
+### 🆕 Prediction Markets (December 2024)
+
+Binary prediction markets for AsterPad tokens - bet YES/NO on token milestones:
+
+- **Market Cap Targets**: "Will $RIZZ hit $100K mcap?"
+- **Graduation**: "Will $MPEPE graduate this week?"
+- **Price Targets**: "Will $DAWG reach $0.001?"
+- **Volume Targets**: "Will $PLANKTON hit 100 BNB volume?"
+
+**Features:**
+- Token creators create predictions **FREE**
+- Others pay 0.05 BNB creation fee
+- Chainlink BNB/USD oracle for price verification
+- 2% platform fee on winnings
+- ReentrancyGuard, Pausable, 2-step ownership
+- UUPS Upgradeable
 
 ### 🆕 V3 Upgradeable Contracts (December 2024)
 
@@ -65,6 +83,13 @@ After tokens graduate from the bonding curve to PancakeSwap, trades go through t
 
 ## Deployed Contracts (BSC Mainnet)
 
+### Prediction Markets (December 2024 - UUPS Upgradeable)
+
+| Contract | Type | Address | Verified |
+|----------|------|---------|----------|
+| PredictionMarketV1 | **Proxy** | [`0xE71F0961d5738dA23874f218Cf26051f4AD0CfC4`](https://bscscan.com/address/0xE71F0961d5738dA23874f218Cf26051f4AD0CfC4) | ⏳ |
+| PredictionMarketV1 | Implementation | [`0xFF79AB8536A158a55149F1149d67dF22220506df`](https://bscscan.com/address/0xFF79AB8536A158a55149F1149d67dF22220506df) | ⏳ |
+
 ### V3 Contracts (Current - UUPS Upgradeable)
 
 | Contract | Type | Address | Verified |
@@ -91,14 +116,27 @@ npm install
 # Compile contracts
 npm run compile
 
-# Run all tests (91 tests)
+# Run all tests
 npm test
+
+# Run prediction market tests (38 tests)
+npx hardhat test test/PredictionMarketV1.test.ts
 
 # Run with coverage
 npm run coverage
 ```
 
 ## Test Coverage
+
+### PredictionMarketV1 (38 tests)
+- ✅ Initialization (owner, version, fee recipient)
+- ✅ Create prediction (free for creators, fee for others)
+- ✅ Betting (YES/NO, limits, freeze period, same side only)
+- ✅ Resolution (market cap, graduation, price target, volume)
+- ✅ Claiming winnings (2% fee calculation)
+- ✅ Admin functions (pause, 2-step ownership, emergency resolve)
+- ✅ Oracle validation (staleness check, zero price)
+- ✅ View functions
 
 ### AsterPadRouter (51 tests)
 - ✅ Deployment & initialization

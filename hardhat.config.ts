@@ -36,6 +36,16 @@ const config: HardhatUserConfig = {
           viaIR: true
         }
       },
+      "contracts/AsterPadRouterFlattened.sol": {
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1
+          },
+          viaIR: true
+        }
+      },
       "contracts/SnowballFactoryV3.sol": {
         version: "0.8.20",
         settings: {
@@ -56,7 +66,7 @@ const config: HardhatUserConfig = {
           }
         }
       },
-      "contracts/ERC1967Proxy.sol": {
+      "contracts/PredictionMarketProxy.sol": {
         version: "0.8.20",
         settings: {
           optimizer: {

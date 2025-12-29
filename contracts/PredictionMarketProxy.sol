@@ -2,11 +2,11 @@
 pragma solidity ^0.8.20;
 
 /**
- * @title ERC1967Proxy
- * @notice Minimal ERC1967 Proxy for UUPS upgradeable contracts
+ * @title PredictionMarketProxy
+ * @notice Minimal ERC1967 Proxy for PredictionMarketV1 UUPS upgradeable contract
  * @dev Deploy this with the implementation address and initialization data
  */
-contract ERC1967Proxy {
+contract PredictionMarketProxy {
     // ERC1967 implementation slot
     bytes32 private constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
     
