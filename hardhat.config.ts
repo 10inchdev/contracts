@@ -6,6 +6,27 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      {
+        version: "0.8.19",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 1
+          },
+          viaIR: true
+        }
+      }
+    ],
+    overrides: {
+      "contracts/TokenFactory.sol": {
         version: "0.8.19",
         settings: {
           optimizer: {
@@ -15,7 +36,7 @@ const config: HardhatUserConfig = {
           viaIR: true
         }
       },
-      {
+      "contracts/SnowballFactoryV3.sol": {
         version: "0.8.20",
         settings: {
           optimizer: {
@@ -25,8 +46,35 @@ const config: HardhatUserConfig = {
           viaIR: true,
           evmVersion: "paris"
         }
+      },
+      "contracts/PredictionMarketV1.sol": {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      "contracts/ERC1967Proxy.sol": {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
+      },
+      "contracts/mocks/MockContracts.sol": {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          }
+        }
       }
-    ]
+    }
   },
   paths: {
     sources: "./contracts",
