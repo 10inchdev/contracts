@@ -16,76 +16,52 @@ contract MockTokenFactory {
 /**
  * @title MockLaunchpadPool
  * @notice Mock launchpad pool for testing PredictionMarketV1
+ * @dev Matches the actual deployed LaunchpadPool interface
  */
 contract MockLaunchpadPool {
+    // Public state variables (matching actual contract)
     address public token;
-    string public name;
-    string public symbol;
-    uint256 public totalSupply;
-    uint256 public virtualBnb;
-    uint256 public virtualTokens;
-    bool public graduated;
     address public creator;
-    uint256 public totalBnbCollectedValue;
+    bool public graduated;
+    uint256 public bnbRaised;
+    uint256 public tokensSold;
+    uint256 public basePrice;
+    uint256 public slope;
+    uint256 private _currentPrice;
     
     constructor(
         address _token,
-        string memory _name,
-        string memory _symbol,
         address _creator
     ) {
         token = _token;
-        name = _name;
-        symbol = _symbol;
-        totalSupply = 1_000_000_000 ether;
-        virtualBnb = 10 ether;
-        virtualTokens = 500_000_000 ether;
-        graduated = false;
         creator = _creator;
-        totalBnbCollectedValue = 0;
+        graduated = false;
+        bnbRaised = 0;
+        tokensSold = 0;
+        basePrice = 7142857142; // Default base price
+        slope = 400;
+        _currentPrice = 10000000000; // 10 gwei per token (example)
     }
     
-    function getTokenInfo() external view returns (
-        address,
-        string memory,
-        string memory,
-        uint256,
-        uint256,
-        uint256,
-        bool,
-        address
-    ) {
-        return (
-            token,
-            name,
-            symbol,
-            totalSupply,
-            virtualBnb,
-            virtualTokens,
-            graduated,
-            creator
-        );
-    }
-    
-    function totalBnbCollected() external view returns (uint256) {
-        return totalBnbCollectedValue;
+    function getCurrentPrice() external view returns (uint256) {
+        return _currentPrice;
     }
     
     // Test helper functions
-    function setVirtualBnb(uint256 _virtualBnb) external {
-        virtualBnb = _virtualBnb;
+    function setCurrentPrice(uint256 price) external {
+        _currentPrice = price;
     }
     
-    function setVirtualTokens(uint256 _virtualTokens) external {
-        virtualTokens = _virtualTokens;
+    function setBnbRaised(uint256 amount) external {
+        bnbRaised = amount;
     }
     
     function setGraduated(bool _graduated) external {
         graduated = _graduated;
     }
     
-    function setTotalBnbCollected(uint256 _amount) external {
-        totalBnbCollectedValue = _amount;
+    function setTokensSold(uint256 amount) external {
+        tokensSold = amount;
     }
 }
 

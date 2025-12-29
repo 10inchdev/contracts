@@ -450,13 +450,18 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     }
     
     function claim(uint256 predictionId) external whenNotPaused nonReentrant {
-        claimWithMinWinnings(predictionId, 0);
+        _claimInternal(predictionId, 0);
     }
     
     /// @notice Claim with slippage protection
     /// @param predictionId The prediction to claim from
     /// @param minWinnings Minimum expected winnings (reverts if actual < min)
-    function claimWithMinWinnings(uint256 predictionId, uint256 minWinnings) public whenNotPaused nonReentrant {
+    function claimWithMinWinnings(uint256 predictionId, uint256 minWinnings) external whenNotPaused nonReentrant {
+        _claimInternal(predictionId, minWinnings);
+    }
+    
+    /// @dev Internal claim logic
+    function _claimInternal(uint256 predictionId, uint256 minWinnings) internal {
         Prediction storage pred = predictions[predictionId];
         require(pred.resolved, "Not resolved");
         
@@ -806,7 +811,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     // =============================================================================
     
     function version() external pure returns (string memory) {
-        return "1.2.1";
+        return "1.2.2";
     }
     
     // =============================================================================

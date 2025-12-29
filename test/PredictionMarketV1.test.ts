@@ -48,8 +48,6 @@ describe("PredictionMarketV1", function () {
     const MockLaunchpadPool = await ethers.getContractFactory("MockLaunchpadPool");
     launchpadPool = await MockLaunchpadPool.deploy(
       await mockToken.getAddress(),
-      "Test Token",
-      "TEST",
       tokenCreator.address
     );
     
@@ -81,7 +79,7 @@ describe("PredictionMarketV1", function () {
     });
     
     it("Should initialize with correct version", async function () {
-      expect(await predictionMarket.version()).to.equal("1.0.0");
+      expect(await predictionMarket.version()).to.equal("1.2.2");
     });
     
     it("Should not be paused initially", async function () {
@@ -286,7 +284,11 @@ describe("PredictionMarketV1", function () {
     
     it("Should resolve YES when target is met", async function () {
       // Set high price to exceed market cap target
-      await launchpadPool.setVirtualBnb(ethers.parseEther("100")); // High BNB value
+      // Market cap = (TOTAL_SUPPLY * currentPrice) / 1e18 * BNB_PRICE / 1e8
+      // For $500K target with $700 BNB: need currentPrice that gives mcap > $500K
+      // 500000 = (1e27 * price) / 1e18 * 700 / 1e8
+      // price = 500000 * 1e18 * 1e8 / (1e27 * 700) = ~714285714 wei
+      await launchpadPool.setCurrentPrice(ethers.parseEther("0.000001")); // High enough price
       
       await time.increaseTo(deadline);
       // Update oracle timestamp to current time
@@ -299,8 +301,8 @@ describe("PredictionMarketV1", function () {
     });
     
     it("Should resolve NO when target is not met", async function () {
-      // Keep low price
-      await launchpadPool.setVirtualBnb(ethers.parseEther("0.1")); // Low BNB value
+      // Keep very low price so market cap is below target
+      await launchpadPool.setCurrentPrice(1); // Very low price = low mcap
       
       await time.increaseTo(deadline);
       // Update oracle timestamp to current time
@@ -343,7 +345,7 @@ describe("PredictionMarketV1", function () {
       await predictionMarket.connect(user2).bet(predictionId, false, { value: ethers.parseEther("1") });
       
       // Set high price for YES to win
-      await launchpadPool.setVirtualBnb(ethers.parseEther("100"));
+      await launchpadPool.setCurrentPrice(ethers.parseEther("0.000001"));
       
       await time.increaseTo(deadline);
       // Update oracle timestamp to current time
@@ -352,6 +354,9 @@ describe("PredictionMarketV1", function () {
     });
     
     it("Should allow winner to claim", async function () {
+      // Mine a block to satisfy flash loan protection (block.number > placedBlock)
+      await ethers.provider.send("evm_mine", []);
+      
       const balanceBefore = await ethers.provider.getBalance(user1.address);
       
       await expect(
@@ -363,12 +368,18 @@ describe("PredictionMarketV1", function () {
     });
     
     it("Should reject claim from loser", async function () {
+      // Mine a block to satisfy flash loan protection
+      await ethers.provider.send("evm_mine", []);
+      
       await expect(
         predictionMarket.connect(user2).claim(predictionId)
       ).to.be.revertedWith("Did not win");
     });
     
     it("Should reject double claim", async function () {
+      // Mine a block to satisfy flash loan protection
+      await ethers.provider.send("evm_mine", []);
+      
       await predictionMarket.connect(user1).claim(predictionId);
       
       await expect(

@@ -32,7 +32,10 @@ Binary prediction markets for AsterPad tokens - bet YES/NO on token milestones:
 - Others pay 0.05 BNB creation fee
 - Chainlink BNB/USD oracle for price verification
 - 2% platform fee on winnings
+- Permissionless resolution (anyone can call after deadline)
 - ReentrancyGuard, Pausable, 2-step ownership
+- 48-hour upgrade timelock for security
+- Flash loan & slippage protection
 - UUPS Upgradeable
 
 ### 🆕 V3 Upgradeable Contracts (December 2024)
@@ -83,12 +86,24 @@ After tokens graduate from the bonding curve to PancakeSwap, trades go through t
 
 ## Deployed Contracts (BSC Mainnet)
 
-### Prediction Markets (December 2024 - UUPS Upgradeable)
+### Prediction Markets v1.2.2 (December 2024 - UUPS Upgradeable)
 
 | Contract | Type | Address | Verified |
 |----------|------|---------|----------|
-| PredictionMarketV1 | **Proxy** | [`0xE71F0961d5738dA23874f218Cf26051f4AD0CfC4`](https://bscscan.com/address/0xE71F0961d5738dA23874f218Cf26051f4AD0CfC4) | ⏳ |
-| PredictionMarketV1 | Implementation | [`0xFF79AB8536A158a55149F1149d67dF22220506df`](https://bscscan.com/address/0xFF79AB8536A158a55149F1149d67dF22220506df) | ⏳ |
+| PredictionMarketV1 | **Proxy (MAIN)** | [`0xD55Cfc363bd4d22afa56Fef78486c145c15b3e4b`](https://bscscan.com/address/0xD55Cfc363bd4d22afa56Fef78486c145c15b3e4b) | ⏳ |
+| PredictionMarketV1 | Implementation v1.2.2 | [`0x5840cc98a85C54bae8474BFE048F03Bb0F003488`](https://bscscan.com/address/0x5840cc98a85C54bae8474BFE048F03Bb0F003488) | ⏳ |
+
+**Features in v1.2.2:**
+- ✅ Fixed claim reentrancy bug
+- ✅ 48-hour upgrade timelock
+- ✅ Flash loan protection (same-block bet/claim prevention)
+- ✅ Slippage protection for claims
+- ✅ Permissionless resolution (anyone can resolve after deadline)
+
+**Deprecated (PAUSED):**
+| Contract | Address | Status |
+|----------|---------|--------|
+| Old Proxy v1.2.1 | `0xE71F0961d5738dA23874f218Cf26051f4AD0CfC4` | ⚠️ PAUSED |
 
 ### V3 Contracts (Current - UUPS Upgradeable)
 
