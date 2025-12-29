@@ -12,6 +12,9 @@ pragma solidity ^0.8.20;
  * - Storage gaps for upgrade safety
  * - Oracle staleness validation
  * - Comprehensive event emissions
+ * - Upgrade timelock (48 hours)
+ * - Slippage protection for claims
+ * - Flash loan protection (same-block bet/claim prevention)
  */
 
 // =============================================================================
@@ -19,17 +22,15 @@ pragma solidity ^0.8.20;
 // =============================================================================
 
 interface ILaunchpadPool {
-    function getTokenInfo() external view returns (
-        address token,
-        string memory name,
-        string memory symbol,
-        uint256 totalSupply,
-        uint256 virtualBnb,
-        uint256 virtualTokens,
-        bool graduated,
-        address creator
-    );
-    function totalBnbCollected() external view returns (uint256);
+    // Individual state variable getters (actual deployed contract interface)
+    function token() external view returns (address);
+    function creator() external view returns (address);
+    function graduated() external view returns (bool);
+    function bnbRaised() external view returns (uint256);
+    function tokensSold() external view returns (uint256);
+    function basePrice() external view returns (uint256);
+    function slope() external view returns (uint256);
+    function getCurrentPrice() external view returns (uint256);
 }
 
 interface ITokenFactory {
@@ -180,6 +181,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     uint256 public constant MAX_DEADLINE = 30 days;
     uint256 public constant BETTING_FREEZE = 10 minutes;       // Stop betting 10 min before deadline
     uint256 public constant ORACLE_STALENESS_THRESHOLD = 1 hours; // Oracle data must be fresh
+    uint256 public constant UPGRADE_TIMELOCK = 48 hours;          // Timelock for upgrades
     
     // =============================================================================
     // ENUMS
@@ -200,6 +202,10 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     uint256 public nextPredictionId;
     uint256 public totalFeesCollected;
     bool public paused;
+    
+    // Upgrade timelock
+    address public pendingImplementation;
+    uint256 public upgradeScheduledTime;
     
     // =============================================================================
     // STRUCTS
@@ -223,6 +229,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
         uint256 amount;
         bool isYes;
         bool claimed;
+        uint256 placedBlock;  // For flash loan protection
     }
     
     // =============================================================================
@@ -290,6 +297,10 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     event OracleUpdated(address indexed oldOracle, address indexed newOracle);
     event FeeRecipientUpdated(address indexed oldRecipient, address indexed newRecipient);
     
+    event UpgradeScheduled(address indexed implementation, uint256 executeTime);
+    event UpgradeCancelled(address indexed implementation);
+    event UpgradeExecuted(address indexed oldImplementation, address indexed newImplementation);
+    
     // =============================================================================
     // MODIFIERS
     // =============================================================================
@@ -355,7 +366,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
         
         // Check if creator is token owner (free creation)
         ILaunchpadPool launchpad = ILaunchpadPool(pool);
-        (, , , , , , , address tokenCreator) = launchpad.getTokenInfo();
+        address tokenCreator = launchpad.creator();
         bool isFree = (msg.sender == tokenCreator);
         
         if (!isFree) {
@@ -413,6 +424,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
         
         userBet.amount += msg.value;
         userBet.isYes = isYes;
+        userBet.placedBlock = block.number;  // Flash loan protection
         
         if (isYes) {
             pred.yesPool += msg.value;
@@ -423,7 +435,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
         emit BetPlaced(predictionId, msg.sender, isYes, msg.value, pred.yesPool, pred.noPool);
     }
     
-    function resolve(uint256 predictionId) external nonReentrant {
+    function resolve(uint256 predictionId) external whenNotPaused nonReentrant {
         Prediction storage pred = predictions[predictionId];
         require(pred.token != address(0), "Prediction not found");
         require(!pred.resolved, "Already resolved");
@@ -437,7 +449,14 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
         emit PredictionResolved(predictionId, outcome, pred.yesPool, pred.noPool, msg.sender);
     }
     
-    function claim(uint256 predictionId) external nonReentrant {
+    function claim(uint256 predictionId) external whenNotPaused nonReentrant {
+        claimWithMinWinnings(predictionId, 0);
+    }
+    
+    /// @notice Claim with slippage protection
+    /// @param predictionId The prediction to claim from
+    /// @param minWinnings Minimum expected winnings (reverts if actual < min)
+    function claimWithMinWinnings(uint256 predictionId, uint256 minWinnings) public whenNotPaused nonReentrant {
         Prediction storage pred = predictions[predictionId];
         require(pred.resolved, "Not resolved");
         
@@ -445,10 +464,17 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
         require(userBet.amount > 0, "No bet found");
         require(!userBet.claimed, "Already claimed");
         
+        // Flash loan protection: must wait at least 1 block after betting
+        require(block.number > userBet.placedBlock, "Same block claim not allowed");
+        
         // Check if user won
         require(userBet.isYes == pred.outcome, "Did not win");
         
         uint256 winnings = calculateWinnings(predictionId, msg.sender);
+        
+        // Slippage protection
+        require(winnings >= minWinnings, "Winnings below minimum");
+        
         uint256 profit = winnings - userBet.amount;
         userBet.claimed = true;
         
@@ -490,15 +516,13 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     
     function getMarketCapUsd(address pool) public view returns (uint256) {
         ILaunchpadPool launchpad = ILaunchpadPool(pool);
-        (, , , , uint256 virtualBnb, uint256 virtualTokens, , ) = launchpad.getTokenInfo();
         
-        if (virtualTokens == 0) return 0;
+        // Get current price from bonding curve (in wei per token)
+        uint256 currentPrice = launchpad.getCurrentPrice();
+        if (currentPrice == 0) return 0;
         
-        // Price per token in BNB
-        uint256 priceInBnb = (virtualBnb * 1e18) / virtualTokens;
-        
-        // Market cap in BNB
-        uint256 mcapInBnb = (TOTAL_SUPPLY * priceInBnb) / 1e18;
+        // Market cap in BNB = totalSupply * pricePerToken
+        uint256 mcapInBnb = (TOTAL_SUPPLY * currentPrice) / 1e18;
         
         // Convert to USD
         uint256 bnbPrice = getBnbPriceUsd();
@@ -507,12 +531,10 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     
     function getTokenPriceUsd(address pool) public view returns (uint256) {
         ILaunchpadPool launchpad = ILaunchpadPool(pool);
-        (, , , , uint256 virtualBnb, uint256 virtualTokens, , ) = launchpad.getTokenInfo();
         
-        if (virtualTokens == 0) return 0;
-        
-        // Price per token in BNB
-        uint256 priceInBnb = (virtualBnb * 1e18) / virtualTokens;
+        // Get current price from bonding curve (in wei per token)
+        uint256 priceInBnb = launchpad.getCurrentPrice();
+        if (priceInBnb == 0) return 0;
         
         // Convert to USD
         uint256 bnbPrice = getBnbPriceUsd();
@@ -521,13 +543,12 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     
     function hasGraduated(address pool) public view returns (bool) {
         ILaunchpadPool launchpad = ILaunchpadPool(pool);
-        (, , , , , , bool graduated, ) = launchpad.getTokenInfo();
-        return graduated;
+        return launchpad.graduated();
     }
     
     function getTokenVolume(address pool) public view returns (uint256) {
         ILaunchpadPool launchpad = ILaunchpadPool(pool);
-        return launchpad.totalBnbCollected();
+        return launchpad.bnbRaised();
     }
     
     function getBnbPriceUsd() public view returns (uint256) {
@@ -732,12 +753,52 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     }
     
     // =============================================================================
-    // UUPS UPGRADE AUTHORIZATION
+    // UUPS UPGRADE WITH TIMELOCK
     // =============================================================================
     
-    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+    /// @notice Schedule an upgrade (starts timelock)
+    function scheduleUpgrade(address newImplementation) external onlyOwner {
         require(newImplementation != address(0), "Invalid implementation");
         require(newImplementation.code.length > 0, "Not a contract");
+        require(pendingImplementation == address(0), "Upgrade already pending");
+        
+        pendingImplementation = newImplementation;
+        upgradeScheduledTime = block.timestamp + UPGRADE_TIMELOCK;
+        
+        emit UpgradeScheduled(newImplementation, upgradeScheduledTime);
+    }
+    
+    /// @notice Cancel a scheduled upgrade
+    function cancelUpgrade() external onlyOwner {
+        require(pendingImplementation != address(0), "No upgrade pending");
+        
+        address cancelled = pendingImplementation;
+        pendingImplementation = address(0);
+        upgradeScheduledTime = 0;
+        
+        emit UpgradeCancelled(cancelled);
+    }
+    
+    /// @notice Execute a scheduled upgrade (after timelock expires)
+    function executeUpgrade() external onlyOwner {
+        require(pendingImplementation != address(0), "No upgrade pending");
+        require(block.timestamp >= upgradeScheduledTime, "Timelock not expired");
+        
+        address oldImpl = _getImplementation();
+        address newImpl = pendingImplementation;
+        
+        pendingImplementation = address(0);
+        upgradeScheduledTime = 0;
+        
+        _upgradeToAndCall(newImpl, new bytes(0), false);
+        
+        emit UpgradeExecuted(oldImpl, newImpl);
+    }
+    
+    function _authorizeUpgrade(address newImplementation) internal view override onlyOwner {
+        // For direct upgradeTo calls, require it matches the scheduled upgrade
+        require(pendingImplementation == newImplementation, "Must use timelock");
+        require(block.timestamp >= upgradeScheduledTime, "Timelock not expired");
     }
     
     // =============================================================================
@@ -745,7 +806,7 @@ contract PredictionMarketV1 is Initializable, UUPSUpgradeable, ReentrancyGuard {
     // =============================================================================
     
     function version() external pure returns (string memory) {
-        return "1.0.0";
+        return "1.2.1";
     }
     
     // =============================================================================
